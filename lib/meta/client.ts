@@ -77,7 +77,9 @@ export async function getAdAccounts(
 ): Promise<MetaAdAccountRaw[]> {
   return metaGetAll<MetaAdAccountRaw>("me/adaccounts", accessToken, {
     fields:
-      "account_id,name,currency,account_status,timezone_name,business{id,name}",
+      // 'business{id,name}' se omite a propósito: requiere el permiso
+      // business_management (Fase 2). En el MVP basta con ads_read.
+      "account_id,name,currency,account_status,timezone_name",
     limit: "100",
   });
 }
