@@ -198,3 +198,70 @@ export function normalizeInsights(
     date_stop: raw.date_stop ?? null,
   };
 }
+
+// ─── Anuncios + creativos (artes gráficos) ───────────────────────
+
+export interface AdCreative {
+  id?: string;
+  name?: string;
+  title?: string;
+  body?: string;
+  thumbnail_url?: string;
+  image_url?: string;
+  video_id?: string;
+  object_type?: string;
+  instagram_permalink_url?: string;
+  effective_object_story_id?: string;
+}
+
+export interface AdWithCreative {
+  id: string;
+  name: string;
+  status: string;
+  effective_status?: string;
+  adset_id?: string;
+  adset_name?: string;
+  creative?: AdCreative;
+}
+
+/**
+ * Todos los anuncios de una campaña con su creativo (imagen,
+ * miniatura, título, copy). Una sola llamada, paginada.
+ * Requiere solo ads_read.
+ */
+export async function getCampaignAds(
+  accessToken: string,
+  campaignId: string,
+): Promise<AdWithCreative[]> {
+  return metaGetAll<AdWithCreative>(`${campaignId}/ads`, accessToken, {
+    fields:
+      "id,name,status,effective_status,adset_id,adset{name}," +
+      "creative{id,name,title,body,thumbnail_url,image_url,video_id," +
+      "object_type,instagram_permalink_url,effective_object_story_id}",
+    limit: "100",
+  });
+}
+
+export type AdPreviewFormat =
+  | "DESKTOP_FEED_STANDARD"
+  | "MOBILE_FEED_STANDARD"
+  | "INSTAGRAM_STANDARD"
+  | "INSTAGRAM_STORY"
+  | "FACEBOOK_STORY_MOBILE";
+
+/**
+ * Devuelve el HTML (un <iframe> de Meta) del preview del anuncio
+ * para un formato/dispositivo concreto. Requiere solo ads_read.
+ */
+export async function getAdPreview(
+  accessToken: string,
+  adId: string,
+  format: AdPreviewFormat,
+): Promise<string | null> {
+  const res = await metaGet<{ data?: { body: string }[] }>(
+    `${adId}/previews`,
+    accessToken,
+    { ad_format: format },
+  );
+  return res.data?.[0]?.body ?? null;
+}

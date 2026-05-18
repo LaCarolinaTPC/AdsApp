@@ -22,6 +22,9 @@ export function AccountSelector({
     const sp = new URLSearchParams(params.toString());
     sp.set("account", id);
     router.push(`/dashboard/campaigns?${sp.toString()}`);
+    // Fuerza recargar los datos del server component (la lista de
+    // campañas) al cambiar de cuenta en el dropdown.
+    router.refresh();
   }
 
   return (

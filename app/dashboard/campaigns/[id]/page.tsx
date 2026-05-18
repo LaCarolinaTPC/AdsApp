@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/States";
 import { AnalyzeButton } from "@/components/campaigns/AnalyzeButton";
 import { AiAnalysisPanel } from "@/components/campaigns/AiAnalysisPanel";
+import { AdsExplorer } from "@/components/campaigns/AdsExplorer";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 import {
   formatMoney,
@@ -72,7 +73,7 @@ export default async function CampaignDetailPage({
   return (
     <div className="space-y-6">
       <Link
-        href="/dashboard/campaigns"
+        href={`/dashboard/campaigns?account=${(campaign as any).ad_account_id}`}
         className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -174,6 +175,16 @@ export default async function CampaignDetailPage({
           </CardBody>
         </Card>
       )}
+
+      <Card>
+        <CardHeader
+          title="Anuncios y creativos"
+          subtitle="Artes gráficos y preview real en Escritorio, Móvil e Instagram"
+        />
+        <CardBody>
+          <AdsExplorer campaignCacheId={campaign.id} />
+        </CardBody>
+      </Card>
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-900">
