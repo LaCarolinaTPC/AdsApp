@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/States";
 import { AnalyzeButton } from "@/components/campaigns/AnalyzeButton";
 import { AiAnalysisPanel } from "@/components/campaigns/AiAnalysisPanel";
 import { AdsExplorer } from "@/components/campaigns/AdsExplorer";
+import { CampaignChat } from "@/components/campaigns/CampaignChat";
 import { objectiveLabel, statusLabelEs } from "@/lib/meta/labels";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 import {
@@ -176,6 +177,21 @@ export default async function CampaignDetailPage({
           </CardBody>
         </Card>
       )}
+
+      <Card>
+        <CardHeader
+          title="💬 Chat con IA sobre esta campaña"
+          subtitle={`El asistente responde solo sobre «${
+            campaign.name || campaign.campaign_id
+          }». Al abrir otra campaña, el chat será el de esa.`}
+        />
+        <CardBody>
+          <CampaignChat
+            campaignCacheId={campaign.id}
+            campaignName={campaign.name || campaign.campaign_id}
+          />
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader

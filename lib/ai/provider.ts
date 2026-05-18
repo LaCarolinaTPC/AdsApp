@@ -187,3 +187,69 @@ function buildMock(input: CampaignSummaryInput): Omit<AiCallResult, "mocked"> {
     raw: { mocked: true },
   };
 }
+
+// ─── Chat conversacional por campaña ─────────────────────────────
+
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+}
+
+export interface ChatResult {
+  reply: string;
+  model: string;
+  mocked: boolean;
+}
+
+/**
+ * Chat libre, ACOTADO a una campaña. El llamador construye el
+ * `system` con el contexto y las reglas (solo esta campaña).
+ */
+export async function chatWithAI(
+  system: string,
+  history: ChatMessage[],
+): Promise<ChatResult> {
+  if (!isAiConfigured()) {
+    const lastUser = [...history].reverse().find((m) => m.role === "user");
+    return {
+      reply:
+        "🔧 [Modo sin IA — falta OPENAI_API_KEY] He registrado tu pregunta" +
+        (lastUser ? ` («${lastUser.content.slice(0, 120)}»)` : "") +
+        ". Para respuestas reales del analista IA, configura OPENAI_API_KEY " +
+        "en las variables de entorno. Mientras tanto, revisa el panel de " +
+        "métricas y el análisis de IA de esta campaña.",
+      model: "mock-chat-v1",
+      mocked: true,
+    };
+  }
+
+  const res = await fetch(`${env.ai.baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.ai.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: env.ai.model,
+      temperature: 0.4,
+      messages: [{ role: "system", content: system }, ...history],
+    }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(
+      `[ai] Error del proveedor (${res.status}): ${
+        json?.error?.message ?? "respuesta inválida"
+      }`,
+    );
+  }
+
+  return {
+    reply:
+      json?.choices?.[0]?.message?.content?.trim() ??
+      "No pude generar una respuesta.",
+    model: json?.model ?? env.ai.model,
+    mocked: false,
+  };
+}
