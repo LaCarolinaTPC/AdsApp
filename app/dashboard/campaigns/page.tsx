@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AccountSelector } from "@/components/campaigns/AccountSelector";
 import { CampaignTable, type CampaignRow } from "@/components/campaigns/CampaignTable";
 import { SyncButton } from "@/components/dashboard/SyncButton";
-import { CreateCampaignButton } from "@/components/campaigns/CreateCampaignButton";
+import { CampaignBuilder } from "@/components/campaigns/CampaignBuilder";
 import { EmptyState } from "@/components/ui/States";
 import { ConnectMetaButton } from "@/components/dashboard/ConnectMetaButton";
 
@@ -84,7 +84,7 @@ export default async function CampaignsPage({
             endpoint={`/api/meta/campaigns?adAccountId=${selected.id}&refresh=1`}
             label="Sincronizar campañas"
           />
-          <CreateCampaignButton
+          <CampaignBuilder
             adAccountId={selected.id}
             currency={selected.currency}
           />
