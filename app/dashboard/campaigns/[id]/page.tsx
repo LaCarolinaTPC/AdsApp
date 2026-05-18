@@ -10,6 +10,7 @@ import { AnalyzeButton } from "@/components/campaigns/AnalyzeButton";
 import { AiAnalysisPanel } from "@/components/campaigns/AiAnalysisPanel";
 import { AdsExplorer } from "@/components/campaigns/AdsExplorer";
 import { CampaignChat } from "@/components/campaigns/CampaignChat";
+import { CampaignControls } from "@/components/campaigns/CampaignControls";
 import { objectiveLabel, statusLabelEs } from "@/lib/meta/labels";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 import {
@@ -159,6 +160,23 @@ export default async function CampaignDetailPage({
           description="Sincroniza esta cuenta de campañas para traer insights y luego analiza con IA."
         />
       )}
+
+      <Card>
+        <CardHeader
+          title="🎛 Controles de la campaña (Fase 2)"
+          subtitle="Cambios reales en Meta Ads. Cada acción pide confirmación y queda registrada."
+        />
+        <CardBody>
+          <CampaignControls
+            campaignId={campaign.campaign_id}
+            campaignCacheId={campaign.id}
+            campaignName={campaign.name || campaign.campaign_id}
+            status={campaign.effective_status ?? campaign.status}
+            currency={currency}
+            currentDailyBudget={campaign.daily_budget}
+          />
+        </CardBody>
+      </Card>
 
       {latestAnalysis?.summary ? (
         <AiAnalysisPanel

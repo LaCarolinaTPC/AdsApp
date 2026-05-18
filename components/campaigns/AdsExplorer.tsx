@@ -48,6 +48,26 @@ function statusTone(s?: string) {
   return "neutral" as const;
 }
 
+/** Acción de escritura (Fase 2). Devuelve null si OK, o el mensaje de error. */
+async function entityAction(
+  entityType: "adset" | "ad",
+  entityId: string,
+  action: "pause" | "resume",
+): Promise<string | null> {
+  try {
+    const res = await fetch("/api/meta/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityType, entityId, action }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return json.error ?? "Error aplicando el cambio";
+    return null;
+  } catch (e) {
+    return (e as Error).message;
+  }
+}
+
 export function AdsExplorer({ campaignCacheId }: { campaignCacheId: string }) {
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -97,15 +117,33 @@ export function AdsExplorer({ campaignCacheId }: { campaignCacheId: string }) {
     <div className="space-y-6">
       {adSets.map((set) => (
         <div key={set.adset_id} className="space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold text-slate-900">
               {set.adset_name}
             </h3>
             <Badge tone="neutral">{set.ads.length} anuncios</Badge>
+            {set.adset_id !== "sin_adset" && (
+              <button
+                onClick={async () => {
+                  if (
+                    !confirm(
+                      `¿Pausar el conjunto «${set.adset_name}» en Meta Ads? Dejará de entregar.`,
+                    )
+                  )
+                    return;
+                  const e = await entityAction("adset", set.adset_id, "pause");
+                  if (e) setError(e);
+                  else load();
+                }}
+                className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+              >
+                Pausar conjunto
+              </button>
+            )}
           </div>
           <div className="grid gap-4">
             {set.ads.map((ad) => (
-              <AdCard key={ad.id} ad={ad} />
+              <AdCard key={ad.id} ad={ad} onChanged={load} />
             ))}
           </div>
         </div>
@@ -115,12 +153,30 @@ export function AdsExplorer({ campaignCacheId }: { campaignCacheId: string }) {
   );
 }
 
-function AdCard({ ad }: { ad: Ad }) {
+function AdCard({ ad, onChanged }: { ad: Ad; onChanged: () => void }) {
   const [fmt, setFmt] = useState<string | null>(null);
   const [html, setHtml] = useState<Record<string, string>>({});
   const [loadingFmt, setLoadingFmt] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [acting, setActing] = useState(false);
   const c = ad.creative;
+  const adActive = (ad.effective_status ?? ad.status ?? "").toUpperCase() === "ACTIVE";
+
+  async function toggleAd() {
+    const next = adActive ? "pause" : "resume";
+    if (
+      !confirm(
+        `¿${adActive ? "Pausar" : "Reanudar"} el anuncio «${ad.name}» en Meta Ads?`,
+      )
+    )
+      return;
+    setActing(true);
+    setErr(null);
+    const e = await entityAction("ad", ad.id, next);
+    setActing(false);
+    if (e) setErr(e);
+    else onChanged();
+  }
 
   async function showPreview(format: string) {
     setFmt(format);
@@ -163,6 +219,17 @@ function AdCard({ ad }: { ad: Ad }) {
               {ad.effective_status ?? ad.status}
             </Badge>
             {c?.video_id && <Badge tone="info">Video</Badge>}
+            <button
+              onClick={toggleAd}
+              disabled={acting}
+              className={`rounded-lg border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
+                adActive
+                  ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+              }`}
+            >
+              {acting ? "…" : adActive ? "Pausar anuncio" : "Reanudar anuncio"}
+            </button>
           </div>
           {c?.title && (
             <p className="mt-1 text-sm font-medium text-slate-700">

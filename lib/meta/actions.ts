@@ -37,16 +37,24 @@ export class WriteActionsDisabledError extends Error {
   }
 }
 
-function guard(scopes: string[]) {
+/**
+ * Doble seguro:
+ *  1. WRITE_ACTIONS_ENABLED (env, master switch del servidor)
+ *  2. El permiso REAL `ads_management` concedido por Meta
+ *     (no el env META_SCOPES; en Login for Business viene de la
+ *     Configuración → se consulta en vivo con /me/permissions).
+ */
+function guard(permissions: string[]) {
   if (!WRITE_ACTIONS_ENABLED) throw new WriteActionsDisabledError();
-  if (!scopes.includes("ads_management")) {
+  if (!permissions.includes("ads_management")) {
     throw new WriteActionsDisabledError();
   }
 }
 
 interface ActionCtx {
   accessToken: string;
-  scopes: string[];
+  /** Permisos REALES concedidos por Meta (de /me/permissions). */
+  permissions: string[];
 }
 
 async function metaPost(
@@ -74,7 +82,7 @@ async function metaPost(
 // ─── API pública (protegida) ─────────────────────────────────────
 
 export async function pauseCampaign(ctx: ActionCtx, campaignId: string) {
-  guard(ctx.scopes);
+  guard(ctx.permissions);
   return metaPost(campaignId, ctx.accessToken, { status: "PAUSED" });
 }
 
@@ -83,7 +91,7 @@ export async function updateCampaignStatus(
   campaignId: string,
   status: "ACTIVE" | "PAUSED",
 ) {
-  guard(ctx.scopes);
+  guard(ctx.permissions);
   return metaPost(campaignId, ctx.accessToken, { status });
 }
 
@@ -92,14 +100,14 @@ export async function updateCampaignBudget(
   campaignId: string,
   dailyBudgetCents: number,
 ) {
-  guard(ctx.scopes);
+  guard(ctx.permissions);
   return metaPost(campaignId, ctx.accessToken, {
     daily_budget: String(dailyBudgetCents),
   });
 }
 
 export async function pauseAdSet(ctx: ActionCtx, adSetId: string) {
-  guard(ctx.scopes);
+  guard(ctx.permissions);
   return metaPost(adSetId, ctx.accessToken, { status: "PAUSED" });
 }
 
@@ -108,23 +116,69 @@ export async function updateAdSetBudget(
   adSetId: string,
   dailyBudgetCents: number,
 ) {
-  guard(ctx.scopes);
+  guard(ctx.permissions);
   return metaPost(adSetId, ctx.accessToken, {
     daily_budget: String(dailyBudgetCents),
   });
 }
 
 export async function pauseAd(ctx: ActionCtx, adId: string) {
-  guard(ctx.scopes);
+  guard(ctx.permissions);
   return metaPost(adId, ctx.accessToken, { status: "PAUSED" });
 }
 
+export async function setAdSetStatus(
+  ctx: ActionCtx,
+  adSetId: string,
+  status: "ACTIVE" | "PAUSED",
+) {
+  guard(ctx.permissions);
+  return metaPost(adSetId, ctx.accessToken, { status });
+}
+
+export async function setAdStatus(
+  ctx: ActionCtx,
+  adId: string,
+  status: "ACTIVE" | "PAUSED",
+) {
+  guard(ctx.permissions);
+  return metaPost(adId, ctx.accessToken, { status });
+}
+
 export async function duplicateCampaign(ctx: ActionCtx, campaignId: string) {
-  guard(ctx.scopes);
+  guard(ctx.permissions);
   return metaPost(`${campaignId}/copies`, ctx.accessToken, {
     deep_copy: "true",
     status_option: "PAUSED",
   });
+}
+
+/**
+ * Crea una campaña NUEVA. Siempre nace en PAUSED para que NADA gaste
+ * hasta que el usuario configure conjuntos/anuncios en Meta.
+ * special_ad_categories es obligatorio para Meta (vacío = ninguna).
+ */
+export async function createCampaign(
+  ctx: ActionCtx,
+  adAccountId: string, // act_XXXX
+  input: {
+    name: string;
+    objective: string;
+    dailyBudgetCents?: number;
+  },
+) {
+  guard(ctx.permissions);
+  const body: Record<string, string> = {
+    name: input.name,
+    objective: input.objective,
+    status: "PAUSED",
+    special_ad_categories: "[]",
+  };
+  if (input.dailyBudgetCents && input.dailyBudgetCents > 0) {
+    // Presupuesto a nivel campaña (CBO)
+    body.daily_budget = String(input.dailyBudgetCents);
+  }
+  return metaPost(`${adAccountId}/campaigns`, ctx.accessToken, body);
 }
 
 export const WRITE_ACTIONS = {
@@ -133,6 +187,9 @@ export const WRITE_ACTIONS = {
   updateCampaignBudget,
   pauseAdSet,
   updateAdSetBudget,
+  setAdSetStatus,
   pauseAd,
+  setAdStatus,
   duplicateCampaign,
+  createCampaign,
 };
