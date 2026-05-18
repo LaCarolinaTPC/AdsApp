@@ -16,8 +16,27 @@ function optional(value: string | undefined, fallback = ""): string {
   return value && value.trim() !== "" ? value : fallback;
 }
 
+/**
+ * URL pública de la app. Prioridad:
+ *  1. NEXT_PUBLIC_APP_URL (explícita — recomendada en producción)
+ *  2. URL de producción que Vercel inyecta automáticamente
+ *  3. URL del deployment de Vercel (preview)
+ *  4. localhost (desarrollo)
+ * Así, aunque olvides configurar NEXT_PUBLIC_APP_URL en Vercel, NO
+ * redirige a localhost.
+ */
+function resolveAppUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL?.trim()) {
+    return process.env.NEXT_PUBLIC_APP_URL.trim().replace(/\/$/, "");
+  }
+  const vercel =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel}`;
+  return "http://localhost:3000";
+}
+
 export const env = {
-  appUrl: optional(process.env.NEXT_PUBLIC_APP_URL, "http://localhost:3000"),
+  appUrl: resolveAppUrl(),
 
   supabase: {
     url: optional(
@@ -32,9 +51,12 @@ export const env = {
   meta: {
     appId: optional(process.env.META_APP_ID),
     appSecret: optional(process.env.META_APP_SECRET),
+    // Si no se define explícitamente, se deriva de la URL pública
+    // real (Vercel en prod, localhost en dev). Debe coincidir EXACTO
+    // con el "Valid OAuth Redirect URI" registrado en Meta.
     redirectUri: optional(
       process.env.META_REDIRECT_URI,
-      "http://localhost:3000/api/meta/oauth/callback",
+      `${resolveAppUrl()}/api/meta/oauth/callback`,
     ),
     apiVersion: optional(process.env.META_API_VERSION, "v21.0"),
     // MVP solo lectura. Fase 2: añadir ads_management,business_management
