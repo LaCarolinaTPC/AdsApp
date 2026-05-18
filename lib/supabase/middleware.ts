@@ -15,49 +15,68 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(env.supabase.url, env.supabase.anonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(
-        cookiesToSet: {
-          name: string;
-          value: string;
-          options?: Record<string, unknown>;
-        }[],
-      ) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value),
-        );
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options),
-        );
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
   const isProtected = pathname.startsWith("/dashboard");
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  if (!user && isProtected) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
-  }
+  try {
+    const supabase = createServerClient(
+      env.supabase.url,
+      env.supabase.anonKey,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(
+            cookiesToSet: {
+              name: string;
+              value: string;
+              options?: Record<string, unknown>;
+            }[],
+          ) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value),
+            );
+            supabaseResponse = NextResponse.next({ request });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options),
+            );
+          },
+        },
+      },
+    );
 
-  if (user && isAuthPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  return supabaseResponse;
+    if (!user && isProtected) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+
+    if (user && isAuthPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
+  } catch (e) {
+    // Un fallo de config (URL/keys inválidas, red) NO debe tumbar
+    // TODO el sitio. Degradamos con elegancia: las páginas privadas
+    // siguen protegidas porque el layout del dashboard llama a
+    // requireUser() en el servidor de todas formas.
+    console.error("[middleware] Supabase no disponible:", e);
+    if (isProtected) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "config");
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
 }
