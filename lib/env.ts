@@ -51,6 +51,9 @@ export const env = {
   meta: {
     appId: optional(process.env.META_APP_ID),
     appSecret: optional(process.env.META_APP_SECRET),
+    // Facebook Login for Business: ID de la "Configuración" creada
+    // en el panel. Si está presente, se usa el flujo for Business.
+    configId: optional(process.env.META_CONFIG_ID),
     // Si no se define explícitamente, se deriva de la URL pública
     // real (Vercel en prod, localhost en dev). Debe coincidir EXACTO
     // con el "Valid OAuth Redirect URI" registrado en Meta.

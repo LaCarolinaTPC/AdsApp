@@ -2,15 +2,33 @@ import { env } from "@/lib/env";
 import { META_OAUTH_DIALOG, graphUrl, getScopes } from "./config";
 import type { MetaTokenResponse } from "@/types/meta";
 
-/** URL del diálogo de autorización de Meta/Facebook Login for Business. */
+/**
+ * URL del diálogo de autorización.
+ *
+ *  - Facebook Login for Business (apps Business): se usa `config_id`
+ *    de una "Configuración" creada en el panel. Los permisos los
+ *    define esa configuración, NO el parámetro `scope`.
+ *  - Facebook Login clásico: se usa `scope`.
+ *
+ * Si META_CONFIG_ID está definido → flujo "for Business".
+ */
 export function buildAuthorizationUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: env.meta.appId,
     redirect_uri: env.meta.redirectUri,
     state,
-    scope: getScopes().join(","),
     response_type: "code",
   });
+
+  if (env.meta.configId) {
+    // Facebook Login for Business
+    params.set("config_id", env.meta.configId);
+    params.set("override_default_response_type", "true");
+  } else {
+    // Facebook Login clásico
+    params.set("scope", getScopes().join(","));
+  }
+
   return `${META_OAUTH_DIALOG}/${env.meta.apiVersion}/dialog/oauth?${params}`;
 }
 
