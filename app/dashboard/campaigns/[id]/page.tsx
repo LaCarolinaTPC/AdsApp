@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/States";
 import { AnalyzeButton } from "@/components/campaigns/AnalyzeButton";
 import { AiAnalysisPanel } from "@/components/campaigns/AiAnalysisPanel";
 import { AdsExplorer } from "@/components/campaigns/AdsExplorer";
+import { objectiveLabel, statusLabelEs } from "@/lib/meta/labels";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 import {
   formatMoney,
@@ -93,9 +94,9 @@ export default async function CampaignDetailPage({
                   : "warning"
               }
             >
-              {campaign.effective_status ?? campaign.status ?? "—"}
+              {statusLabelEs(campaign.effective_status ?? campaign.status)}
             </Badge>
-            <span>· {campaign.objective ?? "Objetivo n/d"}</span>
+            <span>· {objectiveLabel(campaign.objective)}</span>
           </div>
         </div>
         <AnalyzeButton campaignCacheId={campaign.id} />

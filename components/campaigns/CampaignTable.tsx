@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/States";
+import { objectiveLabel, statusLabelEs } from "@/lib/meta/labels";
 import {
   formatMoney,
   formatNumber,
@@ -188,6 +189,17 @@ export function CampaignTable({ campaigns }: { campaigns: CampaignRow[] }) {
 
   return (
     <div className="space-y-3">
+      <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+        <span>ℹ️</span>
+        <span>
+          Las métricas (gasto, CTR, etc.) son de los{" "}
+          <strong>últimos 30 días</strong>. Una campaña{" "}
+          <strong>pausada o sin actividad</strong> en ese periodo aparece
+          con «—». Pulsa <strong>«Sincronizar campañas»</strong> para traer
+          los datos más recientes desde Meta.
+        </span>
+      </div>
+
       {/* Toolbar: búsqueda + filtro estado */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -207,7 +219,7 @@ export function CampaignTable({ campaigns }: { campaigns: CampaignRow[] }) {
           <option value="ALL">Todos los estados</option>
           {statuses.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {statusLabelEs(s)}
             </option>
           ))}
         </select>
@@ -245,11 +257,11 @@ export function CampaignTable({ campaigns }: { campaigns: CampaignRow[] }) {
                 </td>
                 <td className="px-4 py-4">
                   <Badge tone={statusTone(c.effective_status ?? c.status)}>
-                    {(c.effective_status ?? c.status ?? "—").toString()}
+                    {statusLabelEs(c.effective_status ?? c.status)}
                   </Badge>
                 </td>
                 <td className="px-4 py-4 text-slate-600">
-                  {c.objective ?? "—"}
+                  {objectiveLabel(c.objective)}
                 </td>
                 <td className="px-4 py-4 text-right text-slate-600">
                   {formatMoney(fromMetaBudget(c.daily_budget), c.currency)}
