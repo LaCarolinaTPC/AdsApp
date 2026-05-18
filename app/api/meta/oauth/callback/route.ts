@@ -59,7 +59,14 @@ export async function GET(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Upsert de la conexión (token cifrado)
+    // Una sola conexión activa por usuario: revoca las anteriores
+    // (no se borran, quedan como histórico).
+    await admin
+      .from("meta_connections")
+      .update({ status: "revoked" })
+      .eq("user_id", user.id)
+      .eq("status", "active");
+
     const { data: connection, error: connErr } = await admin
       .from("meta_connections")
       .insert({
@@ -78,20 +85,37 @@ export async function GET(request: NextRequest) {
       throw new Error(connErr?.message ?? "No se pudo guardar la conexión");
     }
 
-    if (adAccounts.length > 0) {
-      await admin.from("meta_ad_accounts").upsert(
-        adAccounts.map((a) => ({
-          user_id: user.id,
-          connection_id: connection.id,
-          account_id: a.id,
-          name: a.name,
-          currency: a.currency,
-          account_status: a.account_status,
-          business_id: a.business?.id ?? null,
-          timezone_name: a.timezone_name ?? null,
-        })),
-        { onConflict: "connection_id,account_id" },
-      );
+    // Deduplica por (user_id, account_id): si la cuenta ya existe se
+    // ACTUALIZA la misma fila (conserva su id → no rompe
+    // campaigns_cache); si no, se inserta. Evita cuentas duplicadas
+    // al reconectar.
+    for (const a of adAccounts) {
+      const { data: existing } = await admin
+        .from("meta_ad_accounts")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("account_id", a.id)
+        .maybeSingle();
+
+      const row = {
+        user_id: user.id,
+        connection_id: connection.id,
+        account_id: a.id,
+        name: a.name,
+        currency: a.currency,
+        account_status: a.account_status,
+        business_id: a.business?.id ?? null,
+        timezone_name: a.timezone_name ?? null,
+      };
+
+      if (existing) {
+        await admin
+          .from("meta_ad_accounts")
+          .update(row)
+          .eq("id", existing.id);
+      } else {
+        await admin.from("meta_ad_accounts").insert(row);
+      }
     }
 
     await logAction({

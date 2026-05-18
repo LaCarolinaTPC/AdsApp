@@ -27,20 +27,33 @@ export async function GET(request: Request) {
     }
     try {
       const accounts = await getAdAccounts(conn.accessToken);
-      if (accounts.length > 0) {
-        await admin.from("meta_ad_accounts").upsert(
-          accounts.map((a) => ({
-            user_id: auth.user.id,
-            connection_id: conn.id,
-            account_id: a.id,
-            name: a.name,
-            currency: a.currency,
-            account_status: a.account_status,
-            business_id: a.business?.id ?? null,
-            timezone_name: a.timezone_name ?? null,
-          })),
-          { onConflict: "connection_id,account_id" },
-        );
+      // Deduplica por (user_id, account_id): actualiza la fila
+      // existente (conserva id → no rompe campaigns_cache) o inserta.
+      for (const a of accounts) {
+        const { data: existing } = await admin
+          .from("meta_ad_accounts")
+          .select("id")
+          .eq("user_id", auth.user.id)
+          .eq("account_id", a.id)
+          .maybeSingle();
+        const row = {
+          user_id: auth.user.id,
+          connection_id: conn.id,
+          account_id: a.id,
+          name: a.name,
+          currency: a.currency,
+          account_status: a.account_status,
+          business_id: a.business?.id ?? null,
+          timezone_name: a.timezone_name ?? null,
+        };
+        if (existing) {
+          await admin
+            .from("meta_ad_accounts")
+            .update(row)
+            .eq("id", existing.id);
+        } else {
+          await admin.from("meta_ad_accounts").insert(row);
+        }
       }
     } catch (e) {
       if (e instanceof MetaApiException && e.isTokenError) {
