@@ -229,7 +229,7 @@ export function CampaignTable({ campaigns }: { campaigns: CampaignRow[] }) {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-100 text-sm">
+        <table className="w-full divide-y divide-slate-100 text-sm">
           <thead className="bg-slate-50 text-xs font-medium uppercase tracking-wide">
             <tr>
               <Th label="Campaña" k="name" />

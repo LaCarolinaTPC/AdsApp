@@ -14,8 +14,8 @@ export default async function DashboardLayout({
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar email={user.email ?? ""} />
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-6">
-          <div className="mx-auto max-w-6xl">{children}</div>
+        <main className="flex-1 overflow-y-auto bg-slate-50 px-6 py-6">
+          <div className="w-full">{children}</div>
         </main>
       </div>
     </div>
