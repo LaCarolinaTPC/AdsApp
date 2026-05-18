@@ -18,6 +18,9 @@ export function buildAuthorizationUrl(state: string): string {
     redirect_uri: env.meta.redirectUri,
     state,
     response_type: "code",
+    // Fuerza a Meta a re-pedir permisos nuevos/declinados aunque el
+    // usuario ya hubiese autorizado antes (clave al ampliar scopes).
+    auth_type: "rerequest",
   });
 
   if (env.meta.configId) {
